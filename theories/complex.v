@@ -1,5 +1,6 @@
 (* (c) Copyright 2006-2016 Microsoft Corporation and Inria.                  *)
 (* Distributed under the terms of CeCILL-B.                                  *)
+From HB Require Import structures.
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp
 Require Import ssrfun ssrbool eqtype ssrnat seq choice fintype.
@@ -70,19 +71,12 @@ Proof. by case. Qed.
 End ComplexEqChoice.
 End ComplexEqChoice.
 
-Definition complex_eqMixin (R : eqType) :=
-  PcanEqMixin (@ComplexEqChoice.complex_of_sqRK R).
-Definition complex_choiceMixin  (R : choiceType) :=
-  PcanChoiceMixin (@ComplexEqChoice.complex_of_sqRK R).
-Definition complex_countMixin  (R : countType) :=
-  PcanCountMixin (@ComplexEqChoice.complex_of_sqRK R).
-
-Canonical complex_eqType (R : eqType) :=
-  EqType R[i] (complex_eqMixin R).
-Canonical complex_choiceType (R : choiceType) :=
-  ChoiceType R[i] (complex_choiceMixin R).
-Canonical complex_countType (R : countType) :=
-  CountType R[i] (complex_countMixin R).
+HB.instance Definition _ (R : eqType) := Equality.copy R[i]
+  (pcan_type (@ComplexEqChoice.complex_of_sqRK R)).
+HB.instance Definition _ (R : choiceType) := Choice.copy R[i]
+  (pcan_type (@ComplexEqChoice.complex_of_sqRK R)).
+HB.instance Definition _ (R : countType) := Countable.copy R[i]
+  (pcan_type (@ComplexEqChoice.complex_of_sqRK R)).
 
 Lemma eq_complex : forall (R : eqType) (x y : complex R),
   (x == y) = (Re x == Re y) && (Im x == Im y).
@@ -105,22 +99,25 @@ Definition addc (x y : R[i]) := let: a +i* b := x in let: c +i* d := y in
   (a + c) +i* (b + d).
 Definition oppc (x : R[i]) := let: a +i* b := x in (- a) +i* (- b).
 
-Program Definition complex_zmodMixin := @ZmodMixin _ C0 oppc addc _ _ _ _.
+Program Definition complex_zmodMixin := @GRing.IsZmodule.Build R[i]
+  C0 oppc addc _ _ _ _.
 Next Obligation. by move=> [a b] [c d] [e f] /=; rewrite !addrA. Qed.
 Next Obligation. by move=> [a b] [c d] /=; congr (_ +i* _); rewrite addrC. Qed.
 Next Obligation. by move=> [a b] /=; rewrite !add0r. Qed.
 Next Obligation. by move=> [a b] /=; rewrite !addNr. Qed.
-Canonical complex_zmodType := ZmodType R[i] complex_zmodMixin.
+HB.instance Definition _ := complex_zmodMixin.
 
 Definition scalec (a : R) (x : R[i]) :=
   let: b +i* c := x in (a * b) +i* (a * c).
 
-Program Definition complex_lmodMixin := @LmodMixin _ _ scalec _ _ _ _.
+Program Definition complex_lmodMixin := @GRing.Zmodule_IsLmodule.Build R R[i]
+  scalec _ _ _ _.
 Next Obligation. by move=> a b [c d] /=; rewrite !mulrA. Qed.
 Next Obligation. by move=> [a b] /=; rewrite !mul1r. Qed.
 Next Obligation. by move=> a [b c] [d e] /=; rewrite !mulrDr. Qed.
 Next Obligation. by move=> [a b] c d /=; rewrite !mulrDl. Qed.
-Canonical complex_lmodType := LmodType R R[i] complex_lmodMixin.
+#[local]
+HB.instance Definition _ := complex_lmodMixin.
 
 End ComplexField_ringType.
 
@@ -167,10 +164,8 @@ Qed.
 
 Lemma nonzero1c : C1 != C0. Proof. by rewrite eq_complex /= oner_eq0. Qed.
 
-Definition complex_comRingMixin :=
-  ComRingMixin (@mulcA R) (@mulcC R) mul1c mulc_addl nonzero1c.
-Canonical complex_ringType := RingType R[i] complex_comRingMixin.
-Canonical complex_comRingType := ComRingType R[i] (@mulcC R).
+HB.instance Definition _ := GRing.Zmodule_IsComRing.Build R[i]
+  (@mulcA R) (@mulcC R) mul1c mulc_addl nonzero1c.
 
 End ComplexField_fieldType.
 
@@ -195,16 +190,7 @@ Qed.
 
 Lemma invc0 : invc C0 = C0. Proof. by rewrite /= !mul0r oppr0. Qed.
 
-Definition complex_fieldUnitMixin := FieldUnitMixin mulVc invc0.
-Canonical complex_unitRingType := UnitRingType C complex_fieldUnitMixin.
-Canonical complex_comUnitRingType := Eval hnf in [comUnitRingType of R[i]].
-
-Lemma field_axiom : GRing.Field.mixin_of complex_unitRingType.
-Proof. by []. Qed.
-
-Definition ComplexFieldIdomainMixin := (FieldIdomainMixin field_axiom).
-Canonical complex_idomainType := IdomainType R[i] (FieldIdomainMixin field_axiom).
-Canonical complex_fieldType := FieldType R[i] field_axiom.
+HB.instance Definition _ := GRing.ComRing_IsField.Build C mulVc invc0.
 
 Lemma real_complex_is_rmorphism : rmorphism (real_complex R).
 Proof.
@@ -225,6 +211,9 @@ Variable R : rcfType.
 Local Notation C := R[i].
 Local Notation C0 := ((0 : R)%:C).
 Local Notation C1 := ((1 : R)%:C).
+
+#[local]
+HB.instance Definition _ := complex_lmodMixin R.
 
 Lemma Re_is_scalar : scalar (@Re R).
 Proof. by move=> a [b c] [d e]. Qed.
@@ -326,35 +315,15 @@ have: 0 <= (a * d - b * c) ^+ 2 by rewrite sqr_ge0.
 by rewrite sqrrB addrAC subr_ge0 [_ * c]mulrC mulrACA [d * _]mulrC.
 Qed.
 
-Definition complex_numMixin := NumMixin lec_normD ltc0_add eq0_normC
-     ge0_lec_total normCM lec_def ltc_def.
-Canonical complex_porderType := POrderType ring_display R[i] complex_numMixin.
-Canonical complex_numDomainType := NumDomainType R[i] complex_numMixin.
-Canonical complex_numFieldType := [numFieldType of R[i]].
-Canonical complex_normedZmodType :=
-  NormedZmodType R[i] R[i] complex_numMixin.
+HB.instance Definition _ := Num.IntegralDomain_IsNumDomain.Build C
+  lec_normD ltc0_add eq0_normC ge0_lec_total normCM lec_def ltc_def.
 
 End ComplexField.
 End ComplexField.
-
-Canonical ComplexField.complex_zmodType.
+HB.export ComplexField.
 (* we do not export the canonical structure of lmodType on purpose *)
 (* i.e. no: Canonical ComplexField.complex_lmodType.               *)
 (* indeed, this would prevent C fril having a normed module over C *)
-Canonical ComplexField.complex_ringType.
-Canonical ComplexField.complex_comRingType.
-Canonical ComplexField.complex_unitRingType.
-Canonical ComplexField.complex_comUnitRingType.
-Canonical ComplexField.complex_idomainType.
-Canonical ComplexField.complex_fieldType.
-Canonical ComplexField.complex_porderType.
-Canonical ComplexField.complex_normedZmodType.
-Canonical ComplexField.complex_numDomainType.
-Canonical ComplexField.complex_numFieldType.
-Canonical ComplexField.real_complex_rmorphism.
-Canonical ComplexField.real_complex_additive.
-Canonical ComplexField.Re_additive.
-Canonical ComplexField.Im_additive.
 
 Definition conjc {R : ringType} (x : R[i]) := let: a +i* b := x in a -i* b.
 Notation "x ^*" := (conjc x) (at level 2, format "x ^*") : complex_scope.
@@ -521,24 +490,17 @@ Proof. by move=> /complex_realP [y ->]. Qed.
 End ComplexTheory.
 
 Definition Rcomplex := complex.
-Canonical Rcomplex_eqType (R : eqType) := [eqType of Rcomplex R].
-Canonical Rcomplex_countType (R : countType) := [countType of Rcomplex R].
-Canonical Rcomplex_choiceType (R : choiceType) := [choiceType of Rcomplex R].
-Canonical Rcomplex_zmodType (R : rcfType) := [zmodType of Rcomplex R].
-Canonical Rcomplex_ringType (R : rcfType) := [ringType of Rcomplex R].
-Canonical Rcomplex_comRingType (R : rcfType) := [comRingType of Rcomplex R].
-Canonical Rcomplex_unitRingType (R : rcfType) := [unitRingType of Rcomplex R].
-Canonical Rcomplex_comUnitRingType (R : rcfType) := [comUnitRingType of Rcomplex R].
-Canonical Rcomplex_idomainType (R : rcfType) := [idomainType of Rcomplex R].
-Canonical Rcomplex_fieldType (R : rcfType) := [fieldType of Rcomplex R].
-Canonical Rcomplex_lmodType (R : rcfType) :=
-  LmodType R (Rcomplex R) (ComplexField.complex_lmodMixin R).
+HB.instance Definition _ (R : eqType) := Equality.on (Rcomplex R).
+HB.instance Definition _ (R : countType) := Countable.on (Rcomplex R).
+HB.instance Definition _ (R : choiceType) := Choice.on (Rcomplex R).
+HB.instance Definition _ (R : rcfType) := GRing.Field.on (Rcomplex R).
+HB.instance Definition _ (R : rcfType) := complex_lmodMixin R.
+HB.instance Definition _ (R : rcfType) := GRing.Lmodule.on (Rcomplex R).
 
 Module RComplexLMod.
 Section RComplexLMod.
 Variable R : rcfType.
 Implicit Types (k : R) (x y z : Rcomplex R).
-Canonical ComplexField.complex_lmodType.
 
 Lemma conjc_is_scalable : scalable (conjc : Rcomplex R -> Rcomplex R).
 Proof. by move=> a [b c]; simpc. Qed.
@@ -637,7 +599,7 @@ rewrite -mulr2n -sqrtrM // mulrAC !mulrA ?[_ * (_ - _)]mulrC -subr_sqr.
 rewrite sqr_sqrtr; last first.
   by rewrite ler_paddr // exprn_even_ge0.
 rewrite [_^+2 + _]addrC addrK -mulrA -expr2 sqrtrM ?exprn_even_ge0 //.
-rewrite !sqrtr_sqr -mulr_natr.
+rewrite !sqrtr_sqr -(mulr_natr (_ * _)).
 rewrite [`|_^-1|]ger0_norm // -mulrA [_ * _%:R]mulrC divff //.
 rewrite mulr1 /u; case: (_ =P _)=>[->|].
   by rewrite normr0 mulr0.
@@ -716,7 +678,8 @@ rewrite [_ * _%:P]mulrC !mul_polyC !scalerN !scalerA -!addrA; congr (_ + _).
 rewrite addrA; congr (_ + _).
   rewrite -opprD -scalerDl -scaleNr; congr(_ *: _).
   rewrite ![a * _]mulrC !divfK // !mulrDl addrACA !mulNr addNr addr0.
-  by rewrite -opprD opprK -mulrDr -mulr2n -mulr_natl divff ?mulr1 ?pnatr_eq0.
+  rewrite -opprD opprK -mulrDr -mulr2n.
+  by rewrite -(mulr_natl (_^-1)) divff ?mulr1 ?pnatr_eq0.
 symmetry; rewrite -!alg_polyC scalerA; congr (_%:A).
 rewrite [a * _]mulrC divfK // /r2 mulrA mulrACA -invfM -natrM -subr_sqr.
 rewrite sqr_sqrtc sqrrN /d opprB addrC addrNK -2!mulrA.
@@ -809,7 +772,7 @@ rewrite (eq_bigr (fun _ => 1%N)); last first.
   apply/eqP; rewrite eqn_leq rank_leq_row /= lt0n mxrank_eq0.
   rewrite /skew_vec /= !mxvec_delta /= subr_eq0.
   set j1 := mxvec_index _ _.
-  apply/negP => /eqP /matrixP /(_ 0 j1) /=; rewrite !mxE eqxx /=.
+  apply/negP => /eqP /matrixP /(_ 0 j1) /=; rewrite !mxE /= eqxx.
   have /(_ _ _ (_, _) (_, _)) -> :=
     inj_eq (bij_inj (onT_bij (curry_mxvec_bij _ _))).
   rewrite xpair_eqE -!val_eqE /= eq_sym andbb ltn_eqF //.
@@ -1183,7 +1146,7 @@ move=> /(_ m.+1 1 _ f) []; last by move=> a; exists a.
 + by rewrite submx1.
 Qed.
 
-Lemma complex_acf_axiom : GRing.ClosedField.axiom [ringType of R[i]].
+Lemma complex_acf_axiom : GRing.closed_field_axiom [ringType of R[i]].
 Proof.
 move=> n c n_gt0; pose p := 'X^n - \poly_(i < n) c i.
 suff [x rpx] : exists x, root p x.
@@ -1199,15 +1162,10 @@ have [] := Theorem7' (companionmx p); first by rewrite -(subnK sp_gt1) addn2.
 by move=> x; rewrite eigenvalue_root_char companionmxK //; exists x.
 Qed.
 
-Definition complex_decFieldMixin := closed_field_QEMixin complex_acf_axiom.
-Canonical complex_decField := DecFieldType R[i] complex_decFieldMixin.
-Canonical complex_closedField := ClosedFieldType R[i] complex_acf_axiom.
+HB.instance Definition _ := Field_IsAlgClosed.Build R[i] complex_acf_axiom.
 
-Definition complex_numClosedFieldMixin :=
-  ImaginaryMixin (sqr_i R) (fun x => esym (sqr_normc x)).
-
-Canonical complex_numClosedFieldType :=
-  NumClosedFieldType R[i] complex_numClosedFieldMixin.
+HB.instance Definition _ := Num.NumField_IsImaginary.Build R[i]
+  (sqr_i R) sqr_normc.
 
 End Paper_HarmDerksen.
 
@@ -1236,24 +1194,7 @@ End ComplexClosedTheory.
 
 Definition complexalg := realalg[i].
 
-Canonical complexalg_eqType := [eqType of complexalg].
-Canonical complexalg_choiceType := [choiceType of complexalg].
-Canonical complexalg_countype := [choiceType of complexalg].
-Canonical complexalg_zmodType := [zmodType of complexalg].
-Canonical complexalg_ringType := [ringType of complexalg].
-Canonical complexalg_comRingType := [comRingType of complexalg].
-Canonical complexalg_unitRingType := [unitRingType of complexalg].
-Canonical complexalg_comUnitRingType := [comUnitRingType of complexalg].
-Canonical complexalg_idomainType := [idomainType of complexalg].
-Canonical complexalg_fieldType := [fieldType of complexalg].
-Canonical complexalg_decDieldType := [decFieldType of complexalg].
-Canonical complexalg_closedFieldType := [closedFieldType of complexalg].
-Canonical complexalg_porderType := [porderType of complexalg].
-Canonical complexalg_numDomainType := [numDomainType of complexalg].
-Canonical complexalg_normedZmodType :=
-  [normedZmodType complexalg of complexalg].
-Canonical complexalg_numFieldType := [numFieldType of complexalg].
-Canonical complexalg_numClosedFieldType := [numClosedFieldType of complexalg].
+HB.instance Definition _ := Num.ClosedField.on complexalg.
 
 Lemma complexalg_algebraic : integralRange (@ratr [unitRingType of complexalg]).
 Proof.
