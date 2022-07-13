@@ -315,7 +315,7 @@ have: 0 <= (a * d - b * c) ^+ 2 by rewrite sqr_ge0.
 by rewrite sqrrB addrAC subr_ge0 [_ * c]mulrC mulrACA [d * _]mulrC.
 Qed.
 
-HB.instance Definition _ := Num.IntegralDomain_IsNumDomain.Build C
+HB.instance Definition _ := Num.IntegralDomain_IsNumRing.Build C
   lec_normD ltc0_add eq0_normC ge0_lec_total normCM lec_def ltc_def.
 
 End ComplexField.
