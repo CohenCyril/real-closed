@@ -31,7 +31,7 @@
 
   ## select an entry to build in the following `bundles` set
   ## defaults to "default"
-  default-bundle = "9.1";
+  default-bundle = "universes-and-variances";
 
   ## write one `bundles.name` attribute set per
   ## alternative configuration
@@ -73,6 +73,23 @@
     coq-elpi.job = true;
     hierarchy-builder.job = true;
   }; };
+  "universes-and-variances" = {
+    rocqPackages = {
+      rocq-core.override.version = "mattam82:universes-and-variances";
+      coq.override.version = "mattam82:universes-and-variances";
+      stdlib.override.version = "mattam82:universes-and-variances";
+      rocq-elpi.override.version = "mattam82:universes-and-variances";
+      hierarchy-builder.override.version = "mattam82:universes-and-variances";
+      micromega-plugin.job = false;
+      micromega-plugin.override.version = "mattam82:universes-and-variances";
+      mathcomp.override.version = "mattam82:universes-and-variances";
+      mathcomp-bigenough.override.version = "master";
+      mathcomp-finmap.override.version = "CohenCyril:universes-and-variances";
+      interval.job = false;
+      ssprove.job = false;
+      mathcomp-infotheo.job = false;
+    };
+  };
   "master" = {
     rocqPackages = master-overrides // {
       rocq-core.override.version = "master";

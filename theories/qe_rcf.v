@@ -404,7 +404,7 @@ Definition Mods (p q : polyF) : cps (seq polyF) := fun k =>
   ModsAux p q (maxn sp sq.+1) k.
 
 Definition PolyComb (sq : seq polyF) (sc : seq int) :=
-  reducebig [::1%qfT] (iota 0 (size sq))
+  bigop [::1%qfT] (iota 0 (size sq))
   (fun i => BigBody i MulPoly true (nth [::] sq i ^^+ comb_exp sc`_i)%qfT).
 
 Definition Pcq sq i := (nth [::] (map (PolyComb sq) (sg_tab (size sq))) i).
@@ -423,7 +423,7 @@ Fixpoint ProdPoly T (s : seq T) (f : T -> cps polyF) : cps polyF := fun k =>
   else k [::1%qfT].
 
 Definition BoundingPoly (sq : seq polyF) : polyF :=
-  Deriv (reducebig [::1%qfT] sq (fun i => BigBody i MulPoly true i)).
+  Deriv (bigop [::1%qfT] sq (fun i => BigBody i MulPoly true i)).
 
 Definition Coefs (n i : nat) : tF :=
   Const (match n with
@@ -447,9 +447,9 @@ Definition CcountGt0 (sp sq : seq polyF) : fF :=
   else
     let bq := BoundingPoly sq in
       bind cw <- CcountWeak bq sq;
-      ((reducebig True sq (fun q =>
+      ((bigop True sq (fun q =>
           BigBody q And true (LeadCoef q (fun lq => Lt 0 lq))))
-        \/ ((reducebig True sq (fun q =>
+        \/ ((bigop True sq (fun q =>
          BigBody q And true
           (bind sq <- Size q;
           bind lq <- LeadCoef q;
@@ -799,7 +799,7 @@ Qed.
 Lemma eval_PolyComb e sq sc :
   eval_poly e (PolyComb sq sc) = poly_comb (map (eval_poly e) sq) sc.
 Proof.
-rewrite /PolyComb /poly_comb size_map -bigop.unlock -val_enum_ord/= big_map.
+rewrite /PolyComb /poly_comb size_map -val_enum_ord/= big_map.
 rewrite (@big_morph _ _ _ 1%R *%R _ _ (eval_MulPoly _))/= ?mul0r ?add0r//.
 by rewrite big_enum; under eq_bigr do rewrite eval_ExpPoly/= -(nth_map _ 0)//.
 Qed.
@@ -900,7 +900,7 @@ Prenex Implicits eval_ProdPoly.
 Lemma eval_BoundingPoly e sq :
   eval_poly e (BoundingPoly sq) = bounding_poly (map (eval_poly e) sq).
 Proof.
-rewrite eval_Deriv -bigop.unlock; congr _^`(); rewrite big_map.
+rewrite eval_Deriv; congr _^`(); rewrite big_map.
 by apply: big_morph => [p q | ]/=; rewrite ?eval_MulPoly // mul0r add0r.
 Qed.
 
@@ -922,7 +922,7 @@ rewrite (eval_CcountWeak (fun n =>
     \big[andb/true]_(q <- sq') (0 < (-1) ^+ (size q).-1 * lead_coef q)
    | 0 < n ])); last first.
   by rewrite eval_BoundingPoly.
-move=> n /=; rewrite -!bigop.unlock !big_map; congr [|| _, _| _].
+move=> n /=; rewrite !big_map; congr [|| _, _| _].
   apply: (big_ind2 (fun u v => qf_eval e u = v))=> //=.
     by move=> u v u' v' -> ->.
   by move=> i _; rewrite (eval_LeadCoef (> 0)).
